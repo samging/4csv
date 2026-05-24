@@ -1,0 +1,11 @@
+EmployeeID,FullName,Email,Department,JobTitle,AnnualSalary
+101,John Garcia,john.garcia@company.com,Marketing,Marketing Manager,110500
+102,Brian Smith,brian.smith@company.com,Finance,Accountant,69500
+103,James Davis,james.davis@company.com,Sales,Account Executive,90500
+104,Sarah Wilson,sarah.wilson@company.com,Operations,Operations Associate,76000
+105,Robert Martinez,robert.martinez@company.com,Engineering,DevOps Engineer,103000
+106,Jessica Anderson,jessica.anderson@company.com,Customer Success,Success Specialist,56000
+107,Amanda Hernandez,amanda.hernandez@company.com,Sales,Sales Representative,64500
+108,Ashley Brown,ashley.brown@company.com,Human Resources,HR Manager,123000
+109,Megan Gonzalez,megan.gonzalez@company.com,Marketing,Marketing Specialist,84500
+110,Alex Miller,alex.miller@company.com,Engineering,Software Engineer,134000
