@@ -1,4 +1,4 @@
-use std::io;
+use std::io::{self, Stdout};
 use std::time::{Duration, Instant};
 use std::thread::sleep;
 
@@ -12,6 +12,7 @@ use crossterm::terminal::EnterAlternateScreen;
 use crossterm::event::EnableMouseCapture;
 use crossterm::event::DisableMouseCapture;
 
+use tui::layout::Rect;
 use tui::widgets::Paragraph;
 use tui::Frame;
 use tui::backend::Backend;
@@ -19,6 +20,9 @@ use tui::backend::Backend;
 use crossterm::execute;
 use std::thread;
 use crossterm::terminal::disable_raw_mode;
+use tui::style::Style;
+use tui::style::Color;
+use tui::widgets::BorderType;
 use tui::{
     backend::CrosstermBackend,
     widgets::{Widget, Block, Borders},
@@ -27,21 +31,67 @@ use tui::{
 };
 
 
-fn layout<B: Backend>(f: &mut Frame<B>, lines: &[String], cursor_x: usize, cursor_y: usize) {
+fn layout<B: Backend>(f: &mut Frame<B>, lines: &[String], cursor_x: usize, cursor_y: usize, set_search: bool) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
         .constraints(
             [
                 Constraint::Percentage(30),
-                Constraint::Percentage(70),
+                Constraint::Percentage(60),
                 Constraint::Percentage(10)
             ].as_ref()
         )
         .split(f.size());
+    
     let text_content = lines.join("\n");
-    let block = Block::default().title("Block").borders(Borders::ALL);
+    
+    
+    let block = Block::default()
+        .borders(Borders::LEFT | Borders::RIGHT)
+        .border_style(Style::default().fg(Color::Black))
+        .border_type(BorderType::Rounded)
+        .style(Style::default().bg(Color::White))
+        .borders(Borders::ALL);
+    
     f.render_widget(block, chunks[0]);
+     
+     
+    let width_chunk = Layout::default().direction(Direction::Horizontal).margin(0)
+        .constraints([Constraint::Length(2), Constraint::Min(0)].as_ref())
+        .split(chunks[0])[0];
+    
+    let button_chunk = Layout::default().direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+        .split(width_chunk)[0];
+    
+        
+    let width_chunk_search = Layout::default().direction(Direction::Horizontal).margin(0)
+        .constraints([Constraint::Length(2), Constraint::Min(0)].as_ref())
+        .split(chunks[0])[1];
+     
+    let search_chunk = Layout::default().direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+        .split(width_chunk_search)[0];
+    
+    let mut block_button = Block::default()
+        .border_type(BorderType::Rounded)
+        .borders(Borders::ALL);
+   
+   let search_field = Block::default().title("search")
+        .border_type(BorderType::Rounded)
+        .borders(Borders::ALL); 
+   
+   if set_search {
+    block_button = Block::default()
+        .border_type(BorderType::Rounded)
+        .style(Style::default().bg(Color::Black).fg(Color::Blue)) 
+        .border_style(Style::default().fg(Color::LightBlue))
+        .borders(Borders::ALL);
+    } 
+    
+    f.render_widget(search_field, search_chunk);
+    f.render_widget(block_button, button_chunk);
     
     let block = Block::default().title("Type here (Press Esc to exit)").borders(Borders::ALL);
     
@@ -91,11 +141,11 @@ fn main() -> Result<(), io::Error> {
     let mut cursor_x: usize = 0;
     let mut cursor_y: usize = 0;
     let mut current_block = Timeblock { from: None, to: None };
-    
+    let mut set_search: bool = false;
     
     loop {
         terminal.draw(|f| {
-            layout(f, &lines, cursor_x, cursor_y); 
+            layout(f, &lines, cursor_x, cursor_y, set_search); 
         })?;
         
         
@@ -129,7 +179,8 @@ fn main() -> Result<(), io::Error> {
                             current_block = current_block.set_to(Instant::now());
                             
                             if current_block.compare_time_event(Duration::from_millis(300)) {
-                                lines[cursor_y].push('3');
+                                set_search = true;
+                                lines[cursor_y].push('T');
                             }
                             
                             current_block = current_block.empty();  
