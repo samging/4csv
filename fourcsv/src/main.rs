@@ -12,8 +12,6 @@ use crossterm::terminal::EnterAlternateScreen;
 use crossterm::event::EnableMouseCapture;
 use crossterm::event::DisableMouseCapture;
 
-use tui::layout::Rect;
-use tui::widgets::Paragraph;
 use tui::Frame;
 use tui::backend::Backend;
 
@@ -25,13 +23,13 @@ use tui::style::Color;
 use tui::widgets::BorderType;
 use tui::{
     backend::CrosstermBackend,
-    widgets::{Widget, Block, Borders},
+    widgets::{Block, Borders, Paragraph, Widget},
     layout::{Layout, Constraint, Direction},
     Terminal
 };
 
 
-fn layout<B: Backend>(f: &mut Frame<B>, lines: &[String], cursor_x: usize, cursor_y: usize, set_search: bool) {
+fn layout<'a, B: Backend>(f: &mut Frame<B>, lines: &[String], cursor_x: usize, cursor_y: usize, set_search: bool, search_field_txt: &'a str) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
@@ -66,6 +64,7 @@ fn layout<B: Backend>(f: &mut Frame<B>, lines: &[String], cursor_x: usize, curso
         .split(width_chunk)[0];
     
         
+    //Search field (chunks) 
     let width_chunk_search = Layout::default().direction(Direction::Horizontal).margin(0)
         .constraints([Constraint::Length(2), Constraint::Min(0)].as_ref())
         .split(chunks[0])[1];
@@ -78,7 +77,7 @@ fn layout<B: Backend>(f: &mut Frame<B>, lines: &[String], cursor_x: usize, curso
         .border_type(BorderType::Rounded)
         .borders(Borders::ALL);
    
-   let search_field = Block::default().title("search")
+   let search_field = Block::default().title("searchsometing")
         .border_type(BorderType::Rounded)
         .borders(Borders::ALL); 
    
@@ -89,8 +88,9 @@ fn layout<B: Backend>(f: &mut Frame<B>, lines: &[String], cursor_x: usize, curso
         .border_style(Style::default().fg(Color::LightBlue))
         .borders(Borders::ALL);
     } 
+    let search_text: Paragraph<'a> = Paragraph::new(search_field_txt).block(search_field);
     
-    f.render_widget(search_field, search_chunk);
+    f.render_widget(search_text, search_chunk);
     f.render_widget(block_button, button_chunk);
     
     let block = Block::default().title("Type here (Press Esc to exit)").borders(Borders::ALL);
@@ -142,10 +142,12 @@ fn main() -> Result<(), io::Error> {
     let mut cursor_y: usize = 0;
     let mut current_block = Timeblock { from: None, to: None };
     let mut set_search: bool = false;
+    let mut search_field_txt: &str = "";
+    let mut search_field_txt_buffer: String = String::new();
     
     loop {
         terminal.draw(|f| {
-            layout(f, &lines, cursor_x, cursor_y, set_search); 
+            layout(f, &lines, cursor_x, cursor_y, set_search, search_field_txt); 
         })?;
         
         
@@ -181,6 +183,16 @@ fn main() -> Result<(), io::Error> {
                             if current_block.compare_time_event(Duration::from_millis(300)) {
                                 set_search = true;
                                 lines[cursor_y].push('T');
+                                
+                                if let Event::Key(key_search) = event::read()? {
+                                    match key_search.code { 
+                                        KeyCode::Char(c) => {
+                                            search_field_txt_buffer.push(c);
+                                            search_field_txt = &search_field_txt_buffer;
+                                        }
+                                        _ => {}
+                                    }
+                                }
                             }
                             
                             current_block = current_block.empty();  
