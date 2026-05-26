@@ -1,3 +1,4 @@
+use crossterm::style::Print;
 use csv::{Reader, StringRecord};
 use std::collections::HashMap;
 use std::path::Iter;
@@ -27,17 +28,63 @@ fn example(csv_name: File) -> Result<(), Box<dyn Error>> {
     
     println!("{:?}", hashmp);
     
-    let find_by_name = |name: &str| {
-        if let Some(res) = hashmp.get(name) {
-            println!("---- {:?} ----", name);
-            for v in res {
-                println!("| {:<30} |", v);
+   let get_size: Result<usize, Box<dyn Error>> = (|| {
+        let size_headers = rdr.headers()?.len();
+        Ok(size_headers) // Wrap in Ok() to match the Result type
+    })(); 
+    
+    let mut incrementer: usize = 0;
+    let mut keys: Vec<usize> = vec![];
+    let mut fields: Vec<String> = vec![];
+    let mut indexed_map: HashMap<usize, Vec<String>> = HashMap::new(); 
+    
+    let mut find_by_name = |name: &str| {
+        //let mut lines: HashMap<Vec<String>, Vec<String>> = HashMap::new();
+        
+        if let Ok(field_size) = get_size {
+            if let Some(headers) = hashmp.get(name) {
+                for (index, head) in headers.iter().enumerate() {
+                    //println!("{:?} | {:?}", index, field_size);
+                    
+                    if index % field_size == 0 {
+                        keys.push(incrementer); 
+                        
+                        //println!("{:?} | {:?} <<[{}]", index, field_size, incrementer);
+                        incrementer = incrementer + 1;
+                    } else {
+                        fields.push(head.into()); 
+                        indexed_map.entry(index).or_insert_with(Vec::new).push(head.into());
+                    }
             }
+            
+            
         }
+        }
+        let mut sorted_elements: Vec<(&usize, &Vec<String>)> = indexed_map.iter().collect();
+        
+        sorted_elements.sort_by_key(|&(key, _)| key);
+        
+        let cell_width = 4; 
+        println!("\n┌─ Data Grid ───────────────────────────────────┐");
+        
+        for (key, values) in sorted_elements {
+            // Print the Excel-like row index (e.g., Row #1)
+            print!("| Row {:<3} | ", key);
+            
+            // Print each cell inside the row, padding it to 'cell_width' characters
+            for cell in values {
+                // The '<' aligns text to the left. The 'width' forces fixed spacing.
+                print!("{:<width$} | ", cell, width = cell_width);
+            }
+            println!(); // Move to the next line
+        }
+        
+        println!("└────────────────────────────────────────────────────────┘"); 
     };
     
-   let field_iterator = hashmp.iter().map(|(header, field)| {
-        format!("| {:?} \n| {:?} |\n", header, find_by_name(header));
+     
+    let field_iterator = hashmp.iter().map(|(header, field)| {
+            find_by_name(header);
     }); 
     
     let print_lines = || {
@@ -46,7 +93,6 @@ fn example(csv_name: File) -> Result<(), Box<dyn Error>> {
         }
     };
     
-    //find_by_name("Email");
     print_lines();
     Ok(()) 
 }
